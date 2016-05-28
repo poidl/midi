@@ -1,9 +1,16 @@
 pub type MidiMessage<'a> = &'a u8;
 
+pub enum cckind {
+    channelvolume,
+    unknown
+}
+
 pub trait MidiTranslate {
     fn noteon(&self) -> bool;
     fn noteoff(&self) -> bool;
     fn cc(&self) -> bool;
+    fn cc_type(&self) -> cckind;
+    fn cc_value(&self) -> f32;
 
     fn f0(&self) -> f32;
     fn vel(&self) -> f32;
@@ -21,6 +28,23 @@ impl<'a> MidiTranslate for MidiMessage<'a> {
     }
     fn cc(&self) -> bool {
         *self & 0xf0 == 0xb0
+    }
+    fn cc_type(&self) -> cckind {
+        let msg = *self as *const u8;
+        unsafe{
+            let x = *msg.offset(1);
+            match x {
+                0x07 => return cckind::channelvolume,
+                _    => return cckind::unknown
+            }
+        }
+    }
+    fn cc_value(&self) -> f32 {
+        let msg = *self as *const u8;
+        unsafe{
+            let x = *msg.offset(2);
+            (x as f32)/127f32
+        }
     }
     fn f0(&self) -> f32 {
         let msg = *self as *const u8;
